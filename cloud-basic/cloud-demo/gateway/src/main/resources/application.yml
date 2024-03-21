@@ -1,0 +1,38 @@
+server:
+  port: 10010
+spring:
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      server-addr: nacos:8848
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            # 允许向该服务器提交请求的URI
+            allowedOrigins: '*'
+            # 允许跨域的方法
+            allowedMethods:
+              - GET
+              - POST
+              - DELETE
+              - PUT
+              - OPTIONS
+            allowedHeaders: "*"     #允许携带请求中的头信息
+            allowCredentials: true #允许携带cookie
+            # 预检请求的缓存时间（秒），即在这个时间段里对于相同的跨域请求不会再预检
+            maxAge: 36000
+      routes:
+        - id: user-service #路由标识
+          uri: lb://userservice
+          predicates:
+            - Path=/user/**
+#          filters:
+#            - AddRequestHeader=Truth,DUT-SUN is NB
+        - id: order-service
+          uri: lb://orderservice
+          predicates:
+            - Path=/order/**
+      default-filters:
+        - AddRequestHeader=Truth,DUT-SUN is NB
