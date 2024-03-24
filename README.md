@@ -1663,3 +1663,598 @@ es7出现前的解决方案
 流量控制是一种预防措施，当很多请求来了的时候，通过sentinel技术按照服务可以接受的QPS来持续供给请求，也就避免了故障
 
 ![image-20240321182935905](../../AppData/Roaming/Typora/typora-user-images/image-20240321182935905.png)
+
+### Sentinel 流量控制
+
+已经下载到E盘了
+
+![image-20240321192437966](../../AppData/Roaming/Typora/typora-user-images/image-20240321192437966.png)
+
+限流隔离熔断都结合了
+
+
+
+Jmeter压测工具
+
+在桌面
+
+
+
+### 流控模式
+
+![image-20240321203451672](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321203451672.png)
+
+关联模式的作用
+
+通常是当优先级高的请求来了之后让优先级低的限流
+
+
+
+
+
+链路模式通常是在两个业务去调用另一个业务的时候，为了防止高并发业务导致低并发业务无法去调用哪个业务，所以需要对两个链路的来源不同进行限流，对并发高的限流，如果两个业务调用的业务不是一个controller，那么需要添加注解。并且如果两个业务是在同一个类下的controller的时候需要去添加配置
+
+![image-20240321210418417](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321210418417.png)
+
+![](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321210524488.png)
+
+防止sentinel默认将同一个类下的保存到同一个上下文，也就是一个链路下了，变成了两个子链路，这样就做不了链路控制了
+
+
+
+
+
+### 流控效果
+
+![image-20240321210810846](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321210810846.png)
+
+![image-20240321211903600](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321211903600.png)
+
+### 热点资源（特殊限流）
+
+通俗来说就是
+
+商品id访问量不同，根据不同的id去设置不同的QPS
+
+在热点选项不是流控选项
+
+![image-20240321213124385](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321213124385.png)
+
+
+
+注意！！！！
+
+sentinel默认不对mvc做热点参数限流
+
+（也能理解，毕竟全做的话压力太大）
+
+所以需要添加注解
+
+![image-20240321213317580](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321213317580.png)
+
+### Sentinel隔离和熔断降级
+
+![image-20240321214418406](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321214418406.png)
+
+无论是隔离去限制业务的线程数还是说
+
+去检查线程失败的数量的比率然后去熔断
+
+都是对于访问方也就是客户端的限制
+
+
+
+所以最好的方式就是
+
+#### FeignClient整合Sentinel实现降级
+
+##### 报错!
+
+什么autowridelement报错
+
+解决方法是修改Spring Cloud 版本为Hoxton.SR9 启动成功
+
+![image-20240321230716915](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321230716915.png)
+
+自我总结
+
+
+
+作用限流隔离熔断降级
+
+降级"就是在系统出现问题时，通过牺牲部分功能或者数据的准确性，来保证整个系统的稳定性和可用性。
+
+
+
+#### 线程隔离
+
+![image-20240321231348871](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321231348871.png)
+
+#### 熔断降级——断路器
+
+![image-20240321235119048](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321235119048.png)
+
+#### 熔断策略
+
+![image-20240321235314044](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240321235314044.png)
+
+#### 授权规则 防内鬼
+
+哈哈哈，解决了我的疑惑，围过网关都可以访问微服务
+
+
+
+![image-20240322000923827](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322000923827.png)
+
+![image-20240322000946290](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322000946290.png)
+
+![image-20240322001045834](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322001045834.png)
+
+三足鼎立
+
+![image-20240322004421814](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322004421814.png)
+
+#### 顶级BUG
+
+*cluster-name*的bug
+
+ 逆天bug分享，一次white page404一次正常返回请求
+
+
+
+当我以为是网关的问题的时候，经过打印发现不是，而是在之前的学习中吗，添加了一个上海集群的服务，根据负载均衡机制，一次被分配给那个服务一次分配给我现在添加权限校验的网关服务，不过想不明白的是，虽然是一个业务代码，但是我代码新添加了网关过滤逻辑啊，为啥它能正常返回
+
+![image-20240322010207245](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322010207245.png)后来经过搜索发现
+
+因为我的强制关机
+
+这可能是因为你的服务在注销之前没有正确地关闭。当一个Spring Cloud应用关闭时，它应该会自动从Nacos的服务注册表中注销。但是，如果应用没有正常关闭（例如，如果它崩溃了或者被强制杀掉)，那么它可能就不会从注册表中注销。
+
+
+
+所以关机也是个技术活                      
+
+
+
+#### 重要接口                  
+
+![image-20240322103223748](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322103223748.png)
+
+### 规则持久化
+
+![image-20240322103555806](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322103555806.png)
+
+pull模式
+
+
+
+缺点在于虽然写入了数据库但是由于同一个实例只有一个sentinel客户端，所以有客户端的实例可以在写入数据库或者文件之间，更新自己的本地缓存，但是没有客户端的实例呢，就只能去轮询同步了
+
+所以有时效性问题
+
+![image-20240322103830759](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322103830759.png)
+
+![image-20240322104141627](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322104141627.png)
+
+## 分布式事务
+
+![image-20240322120452170](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322120452170.png)
+
+### Seata
+
+解决分布式事务问题的
+
+![image-20240322125810137](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322125810137.png)
+
+![image-20240322125851360](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322125851360.png)
+
+![image-20240322130157989](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322130157989.png)
+
+所谓CAP定理其实就是一致性可用性和分区
+
+
+
+因为服务之间都是通过网络连接不可避免出现分区
+
+而出现分区之后一致性和可用性不能同时兼顾
+
+
+
+
+
+大智慧BASE理论解决CAP的方法
+
+![image-20240322130600431](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322130600431.png)
+
+![image-20240322130811820](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322130811820.png)
+
+![image-20240322131220522](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322131220522.png)
+
+### 逆天BUG
+
+BUG的报错是，cannot create Bean什么什么，以为是链接错误或者配置错误，甚至还在seata-server中发现了两个版本的mysql驱动连接文件，默认选择的是5版本的删了就报错，8版本的改名成5版本的，想来一招偷天换日，不好使，更改
+
+file.conf不好使，因为它不是真正的配置文件，要修改就去修改在nacos的配置文件
+
+终于解决了，首先是mysql8之后的要加cj问题否则无法正常启动
+
+![image-20240322202056717](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322202056717.png)![image-20240322202115823](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322202115823.png)
+
+2.要添加nacos注解
+
+![image-20240322202220557](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322202220557.png)
+
+3.注意JVM内存，毕竟启动的太多了，sentinel，nacos，seata还有运行的微服务
+
+
+
+
+
+### 1.Seata的XA模式
+
+![image-20240322203601894](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322203601894.png)
+
+强一致性
+
+
+
+简单的说就是两个子服务被RM所管理，执行完sql报告状态给TC。，TC分析报告然后统一返回结果，告诉他们应该怎么做
+
+
+
+
+
+### 2.Seata的AT模式
+
+![image-20240322211238979](../../AppData/Roaming/Typora/typora-user-images/image-20240322211238979.png)
+
+![](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322211404985.png)
+
+最终一致
+
+
+
+
+
+### AT模式脏写问题
+
+![image-20240322212054967](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322212054967.png)
+
+
+
+本质原因呢其实就是因为一阶段提交事务和二阶段对于事务的回滚还是删除快照中间有锁的释放过程，让其他线程获得到了锁，然后事务1可能说失败了回滚的时候居然把事务2的更新给覆盖掉了跟没执行一样
+
+
+
+### AT模式的写隔离
+
+![image-20240322213257900](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322213257900.png)
+
+简单我的理解来说就是为了防止中间插入一个小子过来修改，导致自己修改可能无效的情况，所以要全局上锁，
+
+此时呢就让TC创建了一个锁，这个锁是在执行完事务释放DB锁的时候获取（原因是因为这时候才能知道是操作了哪个字段，哪个表）这时候事务2执行了sql之后去获取这个TC锁的时候，发现对于id为1的这个row，已经有了大哥在占有了，就等待把，然后等1执行完阶段二的操作释放TC锁，这时候2才能去执行。
+
+
+
+这时候就有了个思考，全局上锁保持的一致性AT这不就和XA模式差不多了嘛，资源还不是全局被锁定了？
+
+
+
+这是错误的，因为db锁和TC锁的粒度是不同的，TC锁是针对于某个字段的并发访问进行隔离，而db锁是对一张表的全部
+
+![image-20240322214040269](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322214040269.png)
+
+两次快照防止有不被seata管理的服务中间修改
+
+### 3.TCC模式
+
+![image-20240322215818489](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322215818489.png)
+
+
+
+![image-20240322215809338](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322215809338.png)
+
+![image-20240322220026754](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322220026754.png)
+
+在try的时候阻塞了，然后超时之后肯定不能报错，不然重复执行了，所以就给了一个回滚信号，这时候回滚，但是吧被阻塞的事务，又没try，那么就只能执行一个空回滚，但是吧，假如cancel完了，我突然又能try了那么，这个事务就会悬挂在这，后续无论是confirm还是cancel都没有了，也就没人管它了，所以在try的时候要判断是否cancel过了，cancel的时候又得看try没try要不用空回滚哈哈哈
+
+
+
+
+
+那么为了持久化这些状态就得用一张表
+
+
+
+### 4.Saga模式
+
+![image-20240322224822488](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322224822488.png)
+
+没有TCC的资源预留和AT模式的全局锁
+
+
+
+极致的并发处理，最后补偿，没有隔离性
+
+
+
+### 4种模式比较
+
+![image-20240322225247873](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322225247873.png)
+
+### Seata的高可用
+
+![image-20240322230314677](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322230314677.png)
+
+人话来说就是为了有些seata-server挂了切换到其他集群，
+
+而集群的配置实际是事务组的一个映射，而且是具体的服务yml文件中，那么如果要切换我就得去修改文件然后重启
+
+
+
+为了实现热更新就用到了nacos的热更新功能，把这个配置放到nacos的配置文件中
+
+
+
+
+
+## 分布式Redis集群
+
+### Redis持久化
+
+#### 1.RDB
+
+![image-20240322232133376](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322232133376.png)
+
+Redis默认的的持久化，是在停止运行的时候保存，但是我突然宕机呢就不会了
+
+
+
+![image-20240322232350485](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322232350485.png)
+
+bgsave子进程异步保存
+
+![image-20240322232833652](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322232833652.png)
+
+![image-20240322233101137](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322233101137.png)
+
+子进程fork页表
+
+然后物理内存只可读，修改在副本上(写时复制)
+
+
+
+缺点，RDB持续时间很长，可能两次RDB保存中间的修改，导致数据丢失
+
+#### 2.AOF
+
+![image-20240322233630425](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322233630425.png)
+
+![image-20240322233936872](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322233936872.png)
+
+![image-20240322234259598](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322234259598.png)
+
+![image-20240322234637685](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240322234637685.png)
+
+### 1.Redis主从架构
+
+
+
+![image-20240323130849352](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323130849352.png)
+
+#### Redis同步原理
+
+##### 第一次同步——全量不同
+
+![image-20240323131242201](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323131242201.png)
+
+redis第一次数据同步的时候需要用到的同步方案就是全量同步，因为比较慢，
+
+请求数据同步过程如上，就是从发同步请求，主节点fork子进程然后去保存RDB文件发送过去，
+
+如果在保存RDB的时候有命令就写到aof文件一样的一个log文件然后发送给从节点让从节点运行这些命令
+
+![image-20240323131716092](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323131716092.png)
+
+主节点怎么知道哪个是第一次来我需要去进行全量同步呢，
+
+让从节点id和master 的id一样，这样我发现id和我一样，是自己人，再一看offset是0，就证明是第一次了？？？？
+
+这是错误的
+
+
+
+它的判断依据是第一次发现从的repID和自己的不一样，从想要增量同步就会被拒绝然后进行全量同步，主节点返回自己的id给从，之后从就一直用这个id进行增量同步了
+
+
+
+![image-20240323132230712](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323132230712.png)
+
+增量不同
+
+
+
+
+
+![image-20240323132322253](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323132322253.png)
+
+![image-20240323132509959](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323132509959.png)
+
+log本质是一个环形数组结构，然后当master不断新命令，它就不断写，自己的offset就不断++，然后slave发来自己的offset一看他们直接的差异只需要去同步差异就行了，然后至于说是数组会被占满的问题是不会存在的，环形数组结构保证了只要他们直接数据差异不超过一个数组大小，就能去同步数据
+
+![image-20240323132807564](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323132807564.png)
+
+### Redis主从集群优化
+
+![image-20240323133117558](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323133117558.png)
+
+网络直接IO代替磁盘IO（要求网络好带宽高速度快）
+
+redis单节点不要存太多，减小RDB的磁盘IO
+
+提高log大小，这样短时间内都不用全量同步
+
+采用主 链 链结构，减小master压力
+
+
+
+![image-20240323133400333](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323133400333.png)
+
+### 2.Redis哨兵架构
+
+![image-20240323134120776](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323134120776.png)
+
+![image-20240323134437699](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323134437699.png)
+
+![image-20240323134533601](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323134533601.png)
+
+选哪个节点主要就是去看优先级和offset
+
+
+
+选到节点，给它发信号slaveof则就是主节点了，然后发给其他人现在要slaveof谁，然后从节点也有了，以前的主节点呢，配置文件也是被改成主节点是新主节点了
+
+
+
+
+
+redis-sentinel和sentinel不是一个东西，然后的话每个sentinel没有主从之分共同监听集群中的节点，在配置文件中只需要指定每一个sentinel的主节点是谁就行了，然后他就能监听主节点及其所有子节点的连接状态了
+
+
+
+然后当出现故障的时候，故障转移的时候先会去通过投票去选出一个sentinel大哥去唯一的处理redis主节点变更，然后的话，假如有多个人发现了，同时进行投票怎么办？这个呢是按照时间去同意投票请求，比如C能接受到两个投票请求，谁先来就同意谁，后来的也就不同意了。
+
+
+
+选redis大哥的时候1看优先级2看offset
+
+
+
+~~~yml
+version: '3'
+services:
+  redis-master:
+    image: redis:latest
+    container_name: redis-master
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass 123456
+    networks:
+      - redis-net
+
+  redis-slave1:
+    image: redis:latest
+    container_name: redis-slave1
+    ports:
+      - "6378:6379"
+    command: redis-server --slaveof redis-master 6379 --masterauth 123456 --requirepass 123456
+    networks:
+      - redis-net
+
+  redis-slave2:
+    image: redis:latest
+    container_name: redis-slave2
+    ports:
+      - "6377:6379"
+    command: redis-server --slaveof redis-master 6379 --masterauth 123456 --requirepass 123456
+    networks:
+      - redis-net
+ sentinel1:
+    image: bitnami/redis-sentinel:latest
+    container_name: sentinel1
+    ports:
+      - "27001:26379"
+    environment:
+      - REDIS_MASTER_PASSWORD=123456
+      - REDIS_SENTINEL_DOWN_AFTER=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=60000
+      - SENTINEL_NAME=sentinel1
+      - REDIS_MASTER_HOST=81.70.175.60
+      - REDIS_MASTER_PORT=6379
+    volumes:
+      - ./sentinel.conf:/opt/bitnami/redis-sentinel/conf/sentinel.conf
+    networks:
+      - redis-net
+
+  sentinel2:
+    image: bitnami/redis-sentinel:latest
+    container_name: sentinel2
+    ports:
+      - "27002:26379"
+    environment:
+      - REDIS_MASTER_PASSWORD=123456
+      - REDIS_SENTINEL_DOWN_AFTER=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=60000
+      - SENTINEL_NAME=sentinel2
+      - REDIS_MASTER_HOST=81.70.175.60
+  - REDIS_MASTER_PORT=6379
+    volumes:
+      - ./sentinel.conf:/opt/bitnami/redis-sentinel/conf/sentinel.conf
+    networks:
+      - redis-net
+  sentinel3:
+    image: bitnami/redis-sentinel:latest
+    container_name: sentinel3
+    ports:
+      - "27003:26379"
+    environment:
+      - REDIS_MASTER_PASSWORD=123456
+      - REDIS_SENTINEL_DOWN_AFTER=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=60000
+      - SENTINEL_NAME=sentinel3
+      - REDIS_MASTER_HOST=81.70.175.60
+      - REDIS_MASTER_PORT=6379
+
+    volumes:
+      - ./sentinel.conf:/opt/bitnami/redis-sentinel/conf/sentinel.conf
+    networks:
+      - redis-net
+networks:
+  redis-net:
+    driver: bridge
+
+~~~
+
+#### 哨兵机制报错实录！！！（排查时间4小时+）
+
+BUG报错1
+
+无法连接未定义的master
+
+![image-20240323194744672](../../AppData/Roaming/Typora/typora-user-images/image-20240323194744672.png)
+
+当你没指定的时候默认就是mymaster而不是你配置文件中指定的redis-master
+
+BUG报错2
+
+显示连接不上容器
+
+问题
+
+- REDIS_MASTER_HOST=81.70.175.60不能写容器内的容器名
+
+BUG报错3
+
+一旦程序运行，去连接集群之后，主redis节点立马就不能set了，而且变成了一个从节点，你去访问其他从节点以为是主从切换了，结果并不是，而是全都不能set，当我非常郁闷不已的时候，以为是我的配置文件有问题，但是我发现控制台一直一会通道连接成功，一会又连接不到哪个节点，一直循环，但是我只是一个简单的测试啊，我去网上搜索看到一个和我差不多的是因为主节点阻塞而切换了从节点，我后来想了想第一次程序运行的时候还是正常的，说明也就不是配置的问题，于是我就把es集群给down了，
+
+
+
+恢复内存之后，成功了，也没有了任何报错
+
+
+
+
+
+![image-20240323195035800](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323195035800.png)
+
+![image-20240323195054101](../../AppData/Roaming/Typora/typora-user-images/image-20240323195054101.png)
+
+### Redis分片集群结构
+
+![image-20240323202621545](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240323202621545.png)
+
+### 对于一致性hash为什么不用于redis分片集群的思考
+
+[Redis Cluster集群之hash算法和一致性hash算法对比_redis哈希槽,为什么不用一致性哈希的方案-CSDN博客](https://blog.csdn.net/qq_28175019/article/details/125046957#:~:text=为什么redis不采用一致性hash算法 看上面的两种方法，基本没有太大的区别。 数据来了hash运算，然后路由到不同的节点。 但是有一个比较明显的区别，就是当一个节点挂掉后数据的路由策略。 差异：,1. 假如node1因为热点key问题宕机了，然后选取slave1作为主节点，那么salve也会承受不了压力进而宕机。 由于一致性hash算法，那么master1被剔除了，它的请求就会路由到master2，然后master2也会宕机，然后master3也会宕机，导致 缓存的雪崩效应 。)
+
+这篇文章讲的好好
