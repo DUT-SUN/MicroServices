@@ -15,11 +15,11 @@ public class RedisDemoApplication {
     }
     @Bean
     public LettuceClientConfigurationBuilderCustomizer clientConfigurationBuilderCustomizer() {
-    return new LettuceClientConfigurationBuilderCustomizer() {
-        @Override
-        public void customize(LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigurationBuilder) {
-            clientConfigurationBuilder.readFrom(ReadFrom.REPLICA_PREFERRED);
-        }
-    };
+        return new LettuceClientConfigurationBuilderCustomizer() {
+            @Override
+            public void customize(LettuceClientConfiguration.LettuceClientConfigurationBuilder clientConfigurationBuilder) {
+                clientConfigurationBuilder.readFrom(ReadFrom.REPLICA_PREFERRED);
+            }
+        };
     }
 }

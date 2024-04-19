@@ -51,7 +51,6 @@ public class HotelIndexTest {
     }
     @Test
     void ExistHotelIndex() throws IOException {
-        //1.创建Request对象
         GetIndexRequest getIndexRequest =new GetIndexRequest("hotel"); ;
         Boolean flag=client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
         System.out.println(flag);

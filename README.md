@@ -2258,3 +2258,315 @@ BUG报错3
 [Redis Cluster集群之hash算法和一致性hash算法对比_redis哈希槽,为什么不用一致性哈希的方案-CSDN博客](https://blog.csdn.net/qq_28175019/article/details/125046957#:~:text=为什么redis不采用一致性hash算法 看上面的两种方法，基本没有太大的区别。 数据来了hash运算，然后路由到不同的节点。 但是有一个比较明显的区别，就是当一个节点挂掉后数据的路由策略。 差异：,1. 假如node1因为热点key问题宕机了，然后选取slave1作为主节点，那么salve也会承受不了压力进而宕机。 由于一致性hash算法，那么master1被剔除了，它的请求就会路由到master2，然后master2也会宕机，然后master3也会宕机，导致 缓存的雪崩效应 。)
 
 这篇文章讲的好好
+
+## 多级缓存
+
+
+
+![image-20240329170621830](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240329170621830.png)
+
+具体的流程：
+
+1.请求访问浏览器，查浏览器本地缓存
+
+2.再去访问请求 到nginx负载均衡服务器上，转发到nginx服务集群（集群由Openresty管理）
+
+3.查询nginx的服务集群配置的共享词典本地缓存
+
+4.查询不到去查redis缓存
+
+5.查不到去查tomcat的进程缓存通过（caffeine实现）
+
+6.再查不到通过caffeine的函数去调用数据库查询语句去返回数据
+
+
+
+数据写回本地缓存是在openresty的lua文件里定义的，
+
+文件里需要写的逻辑是先查本地缓存，查不到去查redis，还差不到查数据库，
+
+然后这时候肯定能查到了，是redis查到的还是数据库查到的，不知道，
+
+反正是查到了，然后写入nginx的本地缓存
+
+
+
+至于redis和数据库的一致性通过canal来处理
+
+### Nginx本地缓存
+
+#### Lua语法
+
+lua的数组取值的时候不能从下标0开始，得从下标1开始
+
+
+
+### JVM进程缓存
+
+#### Caffeine高性能本地缓存库
+
+#### 清除缓存策略
+
+1.可以选择设置缓存有效期
+
+2.可以选择设置缓存有效个数
+
+
+
+### 缓存同步策略
+
+![image-20240329212421770](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301109630.png)
+
+## MQ常见问题及其可靠性![image-20240330103355678](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20240330103355678.png)
+
+### 消息可靠性问题
+
+发送时丢失
+
+1.到exchange前丢失
+
+2.到queue前丢失
+
+
+
+发送到丢失
+
+3.MQ宕机，消息队列的消息就丢失了
+
+4.consumer接受到消息未消费就丢失
+
+
+
+
+
+### 消息可靠性（防丢失）
+
+
+
+#### 生产者确认机制
+
+保证消息传到队列里
+
+![image-20240330104229112](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301109351.png)
+
+假如消息成功到了交换机——返回ack
+
+没有则——返回nack
+
+
+
+到了交换机没路由到队列，返回publish-return ack
+
+只有到了queue消息被取走才返回publish-confirm ack
+
+
+
+
+
+很多消息返回很多ack那么怎么知道是哪个消息成功or失败需要重发
+
+（消息都有一个全局ID）
+
+
+
+#### 实现生产者确认
+
+1.在publisher微服务中添加配置
+
+2.编写ReturnCallback（全局唯一）
+
+3.ConfirmCallback编写
+
+![image-20240330111023524](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301110662.png)
+
+![image-20240330111059575](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301110775.png)
+
+![image-20240330111137902](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301111048.png)
+
+#### BUG实录
+
+明明全部消息都成功投递到了exchange而且被正确被消息队列处理了，但是结果显示消息没有被投递到交换机
+
+
+
+非常懵逼，本来以为是没有手动去返回ack的原因，但是本来就默认自动返回ack啊
+
+
+
+解决方案：
+
+![image-20240330133920165](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301339380.png)
+
+在后面添加上这段代码，为了不让rabbitmq太快去断开连接
+
+#### 消息失败的几种情况
+
+![image-20240330134256913](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301342061.png)
+
+### 消息持久化（防宕机）
+
+#### 交换机持久化和队列持久化
+
+![image-20240330134605243](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301346406.png)
+
+单走一张6，队列和交换机持久化，消息不会持久
+
+
+
+
+
+#### 消息持久化
+
+![image-20240330135256074](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301352297.png)
+
+### 消费者消息确认（防失败，服务挂）
+
+虽然MQ有预取机制，但是并不代表消息被取走之后立即就被消息队列删了，而是有消息确认的保障
+
+![image-20240330140510872](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301405066.png)
+
+none就是你消息传来了，只要我异常就扔了，消息队列不会重发
+
+
+
+auto就是你消息来了，由spring容器的AOP机制去检查异常与否，异常返回nack，否则ack，nack的时候，消息就会从消息队列重发，如果你没有异常的处理逻辑那可能就会导致死循环，一直重发一直返回nack
+
+
+
+#### 消息retry配置
+
+![image-20240330141554635](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301415839.png)
+
+#### 错误交换机—重试完成后错误的记录
+
+![image-20240330152435189](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301524318.png)
+
+![image-20240330152823912](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301528073.png)
+
+![image-20240330153000567](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301530767.png)
+
+
+
+
+
+错误交换机，当出现问题之后消息就会被发送到error的交换机转发到error消息队列
+
+在队列中的消息可以被管理员查看请求头的错误栈信息及其payload进行代码的修改和调整
+
+![image-20240330162015013](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301620169.png)
+
+
+
+#### 死信交换机
+
+![image-20240330163351615](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301633807.png)
+
+
+
+
+
+#### 对比错误交换机和死信交换机
+
+![image-20240330163621405](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301636613.png)
+
+你会发现他俩一个是消费者发送一个是队列发送
+
+
+
+一个是程序错误一个是过期，被拒绝，队列满了（清理老的，先进的）
+
+#### 如何绑定死信交换机
+
+![image-20240330163829753](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301638879.png)
+
+### TTL
+
+![image-20240330164149292](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301641463.png)
+
+使用TTL和死信交换机实现延时队列
+
+
+
+什么意思呢其实就是原本队列如果在TTL时间内不消费就会被加入死信队列
+
+然后消费者去监听死信队列，也就实现了TTL时间后才会去收到消息
+
+
+
+#### 两种TTL配置
+
+![image-20240330164441035](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301644207.png)
+
+![image-20240330164529656](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301645841.png)
+
+![image-20240330172625280](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301726426.png)
+
+
+
+### 延迟队列（用插件不用TTL+死信）
+
+
+
+![image-20240330172934236](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301729391.png)
+
+比如说15min未支付，15miin通知消费者去取消订单
+
+
+
+
+
+使用方式，
+
+1.就是你去下载插件，放到那个插件包下
+
+
+
+2.然后创建延迟队列就在控制台去创建就行了不需要去在代码中创建
+
+
+
+![image-20240330173958346](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301739488.png)
+
+3.设定延迟的时间在哪设定呢，是在消息请求头里设置
+
+![image-20240330174206278](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301742411.png)
+
+### SpringAMQP实现延时队列
+
+![image-20240330174236941](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301742122.png)
+
+![image-20240330174333218](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301743386.png)
+
+
+
+### 忽略报错
+
+![image-20240330174520789](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301745010.png)
+
+由于callback函数它的触发时间一个是到达交换机之后的过期时间过了之后还有就是routing-key未匹配，所以要忽略
+
+
+
+
+
+### 消息堆积问题
+
+![image-20240330181926326](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301819505.png)
+
+
+
+#### 惰性队列——扩大队列容积的方法，因为普通队列在内存（有上限）
+
+![image-20240330182558925](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301825090.png)
+
+上面直接改变队列为惰性队列
+
+
+
+下面是声明为惰性队列
+
+![image-20240330182755277](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301827460.png)
+
+##### 比较与评价
+
+![image-20240330182931819](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/202403301829963.png)

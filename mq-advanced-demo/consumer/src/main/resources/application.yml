@@ -1,0 +1,22 @@
+logging:
+  pattern:
+    dateformat: HH:mm:ss:SSS
+  level:
+    cn.itcast: debug
+spring:
+  rabbitmq:
+    host: 81.70.175.60 # rabbitMQ的ip地址
+    port: 5672 # 端口
+    username: sun
+    password: sun20030920
+    virtual-host: /
+    listener:
+      simple:
+        prefetch: 1
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          initial-interval: 1000
+          multiplier: 1 #下次等待时间的倍数
+          max-attempts: 3
+          stateless: true #没有事务的代码就写true表示无状态
