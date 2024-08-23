@@ -351,7 +351,6 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 
 决定
 
-
 ServerHttpRequest request=  exchange.getRequest();
 MultiValueMap<String,String>params=request.getQueryParams();这两行爆红与否
 
@@ -1539,8 +1538,6 @@ kibana可以监控es集群，不过新版本需要依赖es的x-pack 功能，配
 
 输入你的elasticsearch的任意节点的地址和端口，点击connect即可：
 
-
-
 ![image-20210109181106866](https://cdn.jsdelivr.net/gh/DUT-SUN/myImg/img/image-20210109181106866.png)
 
 绿色的条，代表集群处于绿色（健康状态）。
@@ -1857,8 +1854,6 @@ pull模式
 因为服务之间都是通过网络连接不可避免出现分区
 
 而出现分区之后一致性和可用性不能同时兼顾
-
-
 
 
 
